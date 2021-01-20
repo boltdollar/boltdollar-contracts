@@ -1,0 +1,6 @@
+secrets.json
+cache/
+artifacts/
+node_modules/
+*~
+app/dist/
