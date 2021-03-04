@@ -1,4 +1,4 @@
-== Bat True Dollar contracts ==
+== Bolt Dollar contracts ==
 * Timelock 0x53c89897742AFdFA53b1362338B68DFCEE0CaBE9 (24h)
 * BoardRoom 0x8ad9662F33EA75e6AbB581DE62EEC52b43436C64
 * Treasury 0x08072eC6A7869bb1a6f05b1cfA7f77fe57d1b78f
