@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.6.12;
+
 import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/utils/Address.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol";
@@ -9,30 +13,39 @@ import "./IZapper.sol";
 import "../common/IPancakePair.sol";
 import "../common/IPancakeRouter02.sol";
 
+/**
+ * A generic zapper implementation which converts a single asset into
+ * a liquidity pair. And breaks a liquidity pair to single assets
+ * 
+ * @author le0pa for boltdollar.finance
+ */
 contract Zapper is Ownable, IZapper {
     using SafeMath for uint;
     using SafeBEP20 for IBEP20;
 
-    /*  ====================
-            CONSTANTS
-        =====================
+    /*  
+     * ====================
+     *      CONSTANTS
+     * ====================
      */
 
     address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
 
     IPancakeRouter02 private constant ROUTER = IPancakeRouter02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
-    /*  ====================
-           STATE VARIABLES
-        =====================
-    */
+    /*
+     * ====================
+     *    STATE VARIABLES
+     * ====================
+     */
 
     mapping(address => address) private routePairAddresses;
 
 
-    /*  ====================
-                INIT
-        ====================
+    /*
+     * ====================
+     *        INIT
+     * ====================
      */
 
     constructor () public {}
@@ -40,19 +53,21 @@ contract Zapper is Ownable, IZapper {
     receive() external payable {}
 
 
-    /*  ====================
-           VIEW FUNCTIONS
-        ====================
-    */
+    /*
+     * ====================
+     *    VIEW FUNCTIONS
+     * ====================
+     */
 
     function routePair(address _address) external view returns (address) {
         return routePairAddresses[_address];
     }
 
 
-    /*  =========================
-           EXTERNAL FUNCTIONS
-        =========================
+    /*
+     * =========================
+     *     EXTERNAL FUNCTIONS
+     * =========================
      */
 
     function zapBNBToLP(address _to) external payable {
@@ -61,7 +76,7 @@ contract Zapper is Ownable, IZapper {
 
 
     function zapTokenToLP(address _from, uint amount, address _to) external {
-        require(_from != WBNB, "use zapBNBToLP when BNB is input");
+        require(_from != WBNB, "Use zapBNBToLP when BNB is input");
 
         IBEP20(_from).safeTransferFrom(msg.sender, address(this), amount);
         _approveTokenIfNeeded(_from);
@@ -72,7 +87,7 @@ contract Zapper is Ownable, IZapper {
 
         // BTS, BTD, BUSD to create BTS-BUSD or BTD-BUSD will hit this if
         if (_from == token0 || _from == token1) {
-            // swap half amount for other
+            // Swap half amount for other
             address other = _from == token0 ? token1 : token0;
             _approveTokenIfNeeded(other);
             uint sellAmount = amount.div(2);
@@ -102,9 +117,10 @@ contract Zapper is Ownable, IZapper {
     }
 
 
-    /*  =========================
-           PRIVATE FUNCTIONS
-        =========================
+    /*
+     * =========================
+     *     PRIVATE FUNCTIONS
+     * =========================
      */
 
     function _approveTokenIfNeeded(address token) private {
@@ -141,7 +157,7 @@ contract Zapper is Ownable, IZapper {
         address[] memory path;
 
         if (routePairAddresses[token] != address(0)) {
-            //Eg [WBNB, BUSD, BTS/BTD]
+            // E.g. [WBNB, BUSD, BTS/BTD]
             path = new address[](3);
             path[0] = WBNB;
             path[1] = routePairAddresses[token];
@@ -159,7 +175,7 @@ contract Zapper is Ownable, IZapper {
     function _swapTokenForBNB(address token, uint amount, address receiver) private returns (uint) {
         address[] memory path;
         if (routePairAddresses[token] != address(0)) {
-            //Eg [BTD/BTS, BUSD, WBNB]
+            // E.g. [BTD/BTS, BUSD, WBNB]
             path = new address[](3);
             path[0] = token;
             path[1] = routePairAddresses[token];
@@ -174,12 +190,11 @@ contract Zapper is Ownable, IZapper {
         return amounts[amounts.length - 1];
     }
 
-    /**
-        Generic swap function that can swap between any two tokens with a maximum of three intermediate hops
-        Not very useful for our current use case as bolt input currencies will only be BUSD, WBNB, BTD, BTS
-        However having this function helps us open up to more input currencies
-    **/
-
+    /*
+     * Generic swap function that can swap between any two tokens with a maximum of three intermediate hops
+     * Not very useful for our current use case as bolt input currencies will only be BUSD, WBNB, BTD, BTS
+     * However having this function helps us open up to more input currencies
+     */
     function _swap(address _from, uint amount, address _to, address receiver) private returns (uint) {
         address intermediate = routePairAddresses[_from];
         if (intermediate == address(0)) {
@@ -188,24 +203,24 @@ contract Zapper is Ownable, IZapper {
 
         address[] memory path;
         if (intermediate != address(0) && (_from == WBNB || _to == WBNB)) {
-            // Eg [WBNB, BUSD, BTS/BTD] or [BTS/BTD, BUSD, WBNB]
+            // E.g. [WBNB, BUSD, BTS/BTD] or [BTS/BTD, BUSD, WBNB]
             path = new address[](3);
             path[0] = _from;
             path[1] = intermediate;
             path[2] = _to;
         } else if (intermediate != address(0) && (_from == intermediate || _to == intermediate)) {
-            // Eg [BUSD, BTS/BTD] or [BTS/BTD, BUSD]
+            // E.g. [BUSD, BTS/BTD] or [BTS/BTD, BUSD]
             path = new address[](2);
             path[0] = _from;
             path[1] = _to;
         } else if (intermediate != address(0) && routePairAddresses[_from] == routePairAddresses[_to]) {
-            // Eg [BTD, BUSD, BTS] or [BTS, BUSD, BTD]
+            // E.g. [BTD, BUSD, BTS] or [BTS, BUSD, BTD]
             path = new address[](3);
             path[0] = _from;
             path[1] = intermediate;
             path[2] = _to;
         } else if (routePairAddresses[_from] != address(0) && routePairAddresses[_to] != address(0) && routePairAddresses[_from] != routePairAddresses[_to]) {
-            // Eg routePairAddresses[xToken] = xRoute
+            // E.g. routePairAddresses[xToken] = xRoute
             // [BTS/BTS, BUSD, WBNB, xRoute, xToken]
             path = new address[](5);
             path[0] = _from;
@@ -214,26 +229,26 @@ contract Zapper is Ownable, IZapper {
             path[3] = routePairAddresses[_to];
             path[4] = _to;
         } else if (intermediate != address(0) && routePairAddresses[_from] != address(0)) {
-            // Eg [BTS/BTD, BUSD, WBNB, xTokenWithWBNBLiquidity]
+            // E.g. [BTS/BTD, BUSD, WBNB, xTokenWithWBNBLiquidity]
             path = new address[](4);
             path[0] = _from;
             path[1] = intermediate;
             path[2] = WBNB;
             path[3] = _to;
         } else if (intermediate != address(0) && routePairAddresses[_to] != address(0)) {
-            // Eg [xTokenWithWBNBLiquidity, WBNB, BUSD, BTS/BTD]
+            // E.g. [xTokenWithWBNBLiquidity, WBNB, BUSD, BTS/BTD]
             path = new address[](4);
             path[0] = _from;
             path[1] = WBNB;
             path[2] = intermediate;
             path[3] = _to;
         } else if (_from == WBNB || _to == WBNB) {
-            // Eg [WBNB, xTokenWithWBNBLiquidity] or [xTokenWithWBNBLiquidity, WBNB]
+            // E.g. [WBNB, xTokenWithWBNBLiquidity] or [xTokenWithWBNBLiquidity, WBNB]
             path = new address[](2);
             path[0] = _from;
             path[1] = _to;
         } else {
-            // Eg [xTokenWithWBNBLiquidity, WBNB, yTokenWithWBNBLiquidity]
+            // E.g. [xTokenWithWBNBLiquidity, WBNB, yTokenWithWBNBLiquidity]
             path = new address[](3);
             path[0] = _from;
             path[1] = WBNB;
@@ -244,22 +259,23 @@ contract Zapper is Ownable, IZapper {
         return amounts[amounts.length - 1];
     }
 
-    /* ========================
-            OWNER FUNCTIONS
-       ========================
-   */
-
     /*
-         Helps store intermediate route information to convert a token to WBNB
-    */
+     * ========================
+     *     OWNER FUNCTIONS
+     * ========================
+     */
+
+    /**
+     * Helps store intermediate route information to convert a token to WBNB
+     */
     function setRoutePairAddress(address asset, address route) external onlyOwner {
         routePairAddresses[asset] = route;
     }
 
 
-    /*
-         Withdraws tokens belonging to the contract
-    */
+    /**
+     * Withdraws tokens belonging to the contract
+     */
     function withdraw(address token) external onlyOwner {
         if (token == address(0)) {
             payable(owner()).transfer(address(this).balance);
