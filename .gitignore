@@ -4,3 +4,10 @@ artifacts/
 node_modules/
 *~
 app/dist/
+/migrations/
+/test/
+/LICENSE
+/truffle-config.js
+/.gitattributes
+/.idea/
+.DS_Store
