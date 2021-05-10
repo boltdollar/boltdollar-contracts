@@ -85,8 +85,6 @@ contract Zapper is Ownable, IZapper {
 
 
     function zapTokenToLP(address _from, uint amount, address _to) external {
-        require(_from != WBNB, "Use zapBNBToLP when BNB is input");
-
         IBEP20(_from).safeTransferFrom(msg.sender, address(this), amount);
         _approveTokenIfNeeded(_from);
 
