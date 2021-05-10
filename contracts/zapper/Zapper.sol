@@ -30,6 +30,9 @@ contract Zapper is Ownable, IZapper {
      */
 
     address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address private constant BTD = 0xd1102332a213e21faf78b69c03572031f3552c33;
+    address private constant BTS = 0xc2e1acef50ae55661855e8dcb72adb182a3cc259;
+    address private constant BUSD = 0xe9e7cea3dedca5984780bafc599bd69add087d56;
 
     IPancakeRouter02 private constant ROUTER = IPancakeRouter02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
 
@@ -39,6 +42,9 @@ contract Zapper is Ownable, IZapper {
      * ====================
      */
 
+    /**
+     * Stores intermediate route information to convert a token to WBNB
+     */
     mapping(address => address) private routePairAddresses;
 
 
@@ -48,7 +54,10 @@ contract Zapper is Ownable, IZapper {
      * ====================
      */
 
-    constructor () public {}
+    constructor () public {
+        setRoutePairAddress(BTS, BUSD);
+        setRoutePairAddress(BTD, BUSD);
+    }
 
     receive() external payable {}
 
