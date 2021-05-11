@@ -23,18 +23,12 @@ contract Zapper is Ownable, IZapper {
     using SafeMath for uint;
     using SafeBEP20 for IBEP20;
 
-    /*  
-     * ====================
-     *      CONSTANTS
-     * ====================
-     */
+    address public immutable WBNB;
+    address public immutable BTD;
+    address public immutable BTS;
+    address public immutable BUSD;
 
-    address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address private constant BTD = 0xd1102332a213e21faf78b69c03572031f3552c33;
-    address private constant BTS = 0xc2e1acef50ae55661855e8dcb72adb182a3cc259;
-    address private constant BUSD = 0xe9e7cea3dedca5984780bafc599bd69add087d56;
-
-    IPancakeRouter02 private constant ROUTER = IPancakeRouter02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    IPancakeRouter02 private immutable ROUTER;
 
     /*
      * ====================
@@ -43,7 +37,7 @@ contract Zapper is Ownable, IZapper {
      */
 
     /**
-     * Stores intermediate route information to convert a token to WBNB
+     * @dev Stores intermediate route information to convert a token to WBNB
      */
     mapping(address => address) private routePairAddresses;
 
@@ -54,9 +48,16 @@ contract Zapper is Ownable, IZapper {
      * ====================
      */
 
-    constructor () public {
-        setRoutePairAddress(BTS, BUSD);
-        setRoutePairAddress(BTD, BUSD);
+    constructor (address _pcsV1Router, address _WBNB, address _BTD, address _BTS, address _BUSD) public {
+        ROUTER = IPancakeRouter02(_pcsV1Router);
+
+        WBNB = _WBNB;
+        BTD = _BTD;
+        BTS = _BTS;
+        BUSD = _BUSD;
+
+        routePairAddresses[_BTS] = _BUSD;
+        routePairAddresses[_BTD] = _BUSD;
     }
 
     receive() external payable {}
@@ -79,12 +80,12 @@ contract Zapper is Ownable, IZapper {
      * =========================
      */
 
-    function zapBNBToLP(address _to) external payable {
+    function zapBNBToLP(address _to) external override payable {
         _swapBNBToLP(_to, msg.value, msg.sender);
     }
 
 
-    function zapTokenToLP(address _from, uint amount, address _to) external {
+    function zapTokenToLP(address _from, uint amount, address _to) external override {
         IBEP20(_from).safeTransferFrom(msg.sender, address(this), amount);
         _approveTokenIfNeeded(_from);
 
@@ -108,7 +109,7 @@ contract Zapper is Ownable, IZapper {
         }
     }
 
-    function breakLP(address _from, uint amount) external {
+    function breakLP(address _from, uint amount) external override {
         IBEP20(_from).safeTransferFrom(msg.sender, address(this), amount);
         _approveTokenIfNeeded(_from);
 
@@ -275,7 +276,7 @@ contract Zapper is Ownable, IZapper {
     /**
      * Helps store intermediate route information to convert a token to WBNB
      */
-    function setRoutePairAddress(address asset, address route) external onlyOwner {
+    function setRoutePairAddress(address asset, address route) external {
         routePairAddresses[asset] = route;
     }
 

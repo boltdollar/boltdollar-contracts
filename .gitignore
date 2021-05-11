@@ -11,3 +11,4 @@ app/dist/
 /.gitattributes
 /.idea/
 .DS_Store
+/contracts/dummy/
